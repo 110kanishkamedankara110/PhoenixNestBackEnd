@@ -13,5 +13,8 @@
         <mapping class="com.phoenix.model.Category" />
         <mapping class="com.phoenix.model.CategoryImage"/>
         <mapping class="com.phoenix.model.App"/>
+        <mapping class="com.phoenix.model.AppDetails"/>
+        <mapping class="com.phoenix.model.Screenshot"/>
+
     </session-factory>
 </hibernate-configuration>

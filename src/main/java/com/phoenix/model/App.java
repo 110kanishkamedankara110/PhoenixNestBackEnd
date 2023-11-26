@@ -2,9 +2,12 @@ package com.phoenix.model;
 
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
+import jakarta.persistence.OneToOne;
+import org.hibernate.annotations.Cascade;
+import org.hibernate.annotations.CascadeType;
 
 @Entity
-public class App extends BaseModel{
+public class App extends BaseModel {
     @Id
     private String packageName;
     private String user;
@@ -12,6 +15,27 @@ public class App extends BaseModel{
     private String mainActivity;
     private String appIcon;
     private String appBanner;
+
+    private boolean isActive = false;
+
+    public AppDetails getAppDetails() {
+        return appDetails;
+    }
+
+    public void setAppDetails(AppDetails appDetails) {
+        this.appDetails = appDetails;
+    }
+
+    @OneToOne(mappedBy = "app")
+    @Cascade(CascadeType.ALL)
+    private AppDetails appDetails;
+    public boolean isActive() {
+        return isActive;
+    }
+
+    public void setActive(boolean active) {
+        isActive = active;
+    }
 
     public String getPackageName() {
         return packageName;
