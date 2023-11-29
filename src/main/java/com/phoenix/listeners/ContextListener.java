@@ -59,11 +59,11 @@ public class ContextListener implements ServletContextListener {
             image5.setCategory(category5);
 
 
-            category1.setCategory("Games");
-            category2.setCategory("Music");
-            category3.setCategory("Movies");
-            category4.setCategory("Education");
-            category5.setCategory("Social");
+            category1.setCategoryName("Games");
+            category2.setCategoryName("Music");
+            category3.setCategoryName("Movies");
+            category4.setCategoryName("Education");
+            category5.setCategoryName("Social");
 
             category1.setImages(image1);
             category2.setImages(image2);

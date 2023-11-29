@@ -25,16 +25,16 @@ public class AppDetails extends BaseModel {
         this.description = description;
     }
 
-    public List<Screenshot> getScreenshots() {
-        return screenshots;
-    }
-
-    public void setScreenshots(Screenshot screenshots) {
-        this.screenshots.add(screenshots);
-    }
-
     public App getApp() {
         return app;
+    }
+
+    public List<Category> getCategories() {
+        return categories;
+    }
+
+    public void setCategories(List<Category> categories) {
+        this.categories = categories;
     }
 
     public void setApp(App app) {
@@ -47,9 +47,12 @@ public class AppDetails extends BaseModel {
 
     private String description;
 
-    @OneToMany(mappedBy = "appDetails")
+
+
+    @ManyToMany
+    @JoinTable
     @Cascade(CascadeType.ALL)
-    private List<Screenshot>screenshots=new LinkedList();
+    private List<Category> categories;
 
     @OneToOne
     private App app;

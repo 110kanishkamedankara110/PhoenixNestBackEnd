@@ -1,10 +1,10 @@
 package com.phoenix.model;
 
-import jakarta.persistence.Entity;
-import jakarta.persistence.Id;
-import jakarta.persistence.OneToOne;
+import jakarta.persistence.*;
 import org.hibernate.annotations.Cascade;
 import org.hibernate.annotations.CascadeType;
+
+import java.util.List;
 
 @Entity
 public class App extends BaseModel {
@@ -15,6 +15,8 @@ public class App extends BaseModel {
     private String mainActivity;
     private String appIcon;
     private String appBanner;
+
+
 
     private boolean isActive = false;
 

@@ -20,11 +20,24 @@ public class Category extends BaseModel {
     private Integer id;
     private String categoryName;
 
+    public void setImages(List<CategoryImage> images) {
+        this.images = images;
+    }
+
+    public List<AppDetails> getAppDetails() {
+        return appDetails;
+    }
+
+    public void setAppDetails(AppDetails appDetails) {
+        this.appDetails.add(appDetails);
+    }
+
     @OneToMany(mappedBy = "category")
     @Cascade(CascadeType.ALL)
-
-
     private List<CategoryImage> images = new LinkedList();
+
+    @ManyToMany(mappedBy = "categories")
+    private List<AppDetails> appDetails=new LinkedList();
 
     public List<CategoryImage> getImages() {
         return images;
@@ -40,14 +53,6 @@ public class Category extends BaseModel {
 
     public void setId(Integer id) {
         this.id = id;
-    }
-
-    public String getCategory() {
-        return categoryName;
-    }
-
-    public void setCategory(String category) {
-        this.categoryName = category;
     }
 
     public String getCategoryName() {

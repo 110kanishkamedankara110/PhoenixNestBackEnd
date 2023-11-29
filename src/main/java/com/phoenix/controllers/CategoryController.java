@@ -45,7 +45,7 @@ public class CategoryController{
             CategoryDto categoryDto = new CategoryDto();
             categoryDto.setImages(images);
             categoryDto.setId(c.getId());
-            categoryDto.setCategory(c.getCategory());
+            categoryDto.setCategory(c.getCategoryName());
             categoryList.add(categoryDto);
         });
 

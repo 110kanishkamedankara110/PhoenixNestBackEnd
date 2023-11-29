@@ -1,10 +1,8 @@
 package com.phoenix.controllers;
 
-import com.phoenix.dto.AppDto;
-import com.phoenix.dto.AppMain;
-import com.phoenix.dto.CategoryDto;
-import com.phoenix.dto.Message;
+import com.phoenix.dto.*;
 import com.phoenix.model.App;
+import com.phoenix.model.AppDetails;
 import com.phoenix.model.Category;
 import com.phoenix.util.FileUploader;
 import com.phoenix.util.HibernateUtil;
@@ -17,7 +15,11 @@ import org.hibernate.SessionFactory;
 import org.hibernate.Transaction;
 import org.hibernate.query.Query;
 
+import javax.imageio.ImageIO;
+import java.awt.*;
+import java.awt.image.BufferedImage;
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.InputStream;
 import java.util.LinkedList;
 import java.util.List;
@@ -102,6 +104,79 @@ public class AppController {
         return new Message().setMessage(message);
     }
 
+    @POST
+    @Path("addAppDetails")
+    @Consumes(MediaType.APPLICATION_JSON)
+    public Message addAppDetails(AppDetailsDto appDetailsDto) {
+        SessionFactory sf = HibernateUtil.getSessionFactory();
+        Session s = sf.openSession();
+        App a = s.find(App.class, appDetailsDto.getPackageName());
+        List<Category> categories = new LinkedList();
+        appDetailsDto.getCategories().forEach(c -> {
+            Query<Category> q = s.createQuery("SELECT c FROM Category c WHERE c.categoryName=:category");
+            q.setParameter("category", c);
+            Category category = q.getSingleResult();
+            categories.add(category);
+        });
+
+        AppDetails appDetails = new AppDetails();
+        appDetails.setCategories(categories);
+        appDetails.setDescription(appDetailsDto.getDescription());
+        appDetails.setApp(a);
+
+        a.setAppDetails(appDetails);
+
+        Transaction ta = s.beginTransaction();
+        try {
+            s.merge(a);
+            ta.commit();
+
+            return new Message().setMessage("Success");
+
+        } catch (Exception e) {
+            ta.rollback();
+            return new Message().setMessage("Error");
+
+        }
+
+
+    }
+    @POST
+    @Path("updateAppDetails")
+    @Consumes(MediaType.APPLICATION_JSON)
+    public Message updateAppDetails(AppDetailsDto appDetailsDto) {
+        SessionFactory sf = HibernateUtil.getSessionFactory();
+        Session s = sf.openSession();
+        App a = s.find(App.class, appDetailsDto.getPackageName());
+        List<Category> categories = new LinkedList();
+        appDetailsDto.getCategories().forEach(c -> {
+            Query<Category> q = s.createQuery("SELECT c FROM Category c WHERE c.categoryName=:category");
+            q.setParameter("category", c);
+            Category category = q.getSingleResult();
+            categories.add(category);
+        });
+
+        AppDetails appDetails = a.getAppDetails();
+        appDetails.setCategories(categories);
+        appDetails.setDescription(appDetailsDto.getDescription());
+
+
+        Transaction ta = s.beginTransaction();
+        try {
+            s.merge(a);
+            ta.commit();
+
+            return new Message().setMessage("Success");
+
+        } catch (Exception e) {
+            ta.rollback();
+            return new Message().setMessage("Error");
+
+        }
+
+
+    }
+
     @GET
     @Path("getApps")
     @Produces(MediaType.APPLICATION_JSON)
@@ -109,20 +184,33 @@ public class AppController {
         SessionFactory sf = HibernateUtil.getSessionFactory();
         Session s = sf.openSession();
 
-        Query<App> query = s.createQuery("SELECT a FROM App a", App.class);
+        Query<App> query = s.createQuery("SELECT a FROM App a ORDER BY a.updated DESC ", App.class);
         List<App> apps = query.getResultList();
 
         List<AppDto> appList = new LinkedList();
 
         apps.forEach(a -> {
             AppDto appDto = new AppDto();
-            List<String> screenShots = new LinkedList();
+
             if (a.getAppDetails() != null) {
-                a.getAppDetails().getScreenshots().forEach(image -> {
-                    screenShots.add(image.getScreenshot());
-                });
-                appDto.setScreenshots(screenShots);
                 appDto.setDescription(a.getAppDetails().getDescription());
+                List<String> categories = new LinkedList();
+                a.getAppDetails().getCategories().forEach(c -> {
+                    categories.add(c.getCategoryName());
+                });
+                appDto.setCategoryies(categories);
+            }
+            try {
+                File f = new File("/PhoenixNest/apps/" + a.getPackageName() + "/appBanner/" + a.getAppBanner());
+                BufferedImage image = ImageIO.read(f);
+                int height = image.getHeight();
+                int width = image.getWidth();
+
+                appDto.setHeight(height);
+                appDto.setWidth(width);
+
+            } catch (Exception e) {
+                e.printStackTrace();
             }
 
 
@@ -138,6 +226,7 @@ public class AppController {
 
         return appList;
     }
+
     @GET
     @Path("getApps/{key}")
     @Produces(MediaType.APPLICATION_JSON)
@@ -145,9 +234,9 @@ public class AppController {
         SessionFactory sf = HibernateUtil.getSessionFactory();
         Session s = sf.openSession();
 
-        Query<App> query = s.createQuery("SELECT a FROM App a WHERE a.user=:user OR a.packageName=:pkgName ", App.class);
-        query.setParameter("user",key);
-        query.setParameter("pkgName",key);
+        Query<App> query = s.createQuery("SELECT a FROM App a WHERE a.user=:user OR a.packageName=:pkgName ORDER BY a.updated DESC  ", App.class);
+        query.setParameter("user", key);
+        query.setParameter("pkgName", key);
         List<App> apps = query.getResultList();
 
         List<AppDto> appList = new LinkedList();
@@ -156,11 +245,12 @@ public class AppController {
             AppDto appDto = new AppDto();
             List<String> screenShots = new LinkedList();
             if (a.getAppDetails() != null) {
-                a.getAppDetails().getScreenshots().forEach(image -> {
-                    screenShots.add(image.getScreenshot());
-                });
-                appDto.setScreenshots(screenShots);
                 appDto.setDescription(a.getAppDetails().getDescription());
+                List<String> categories = new LinkedList();
+                a.getAppDetails().getCategories().forEach(c -> {
+                    categories.add(c.getCategoryName());
+                });
+                appDto.setCategoryies(categories);
             }
 
 
@@ -170,7 +260,18 @@ public class AppController {
 
             appDto.setPackageName(a.getPackageName());
             appDto.setMainActivity(a.getMainActivity());
+            try {
+                File f = new File("/PhoenixNest/apps/" + a.getPackageName() + "/appBanner/" + a.getAppBanner());
+                BufferedImage image = ImageIO.read(f);
+                int height = image.getHeight();
+                int width = image.getWidth();
 
+                appDto.setHeight(height);
+                appDto.setWidth(width);
+
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
             appList.add(appDto);
         });
 

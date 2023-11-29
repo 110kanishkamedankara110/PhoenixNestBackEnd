@@ -8,18 +8,7 @@ public class Screenshot extends BaseModel{
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Integer id;
 
-    public AppDetails getAppDetails() {
-        return appDetails;
-    }
-
-    public void setAppDetails(AppDetails appDetails) {
-        this.appDetails = appDetails;
-    }
-
     private String screenshot;
-
-    @ManyToOne
-    private AppDetails appDetails;
 
     public Integer getId() {
         return id;
