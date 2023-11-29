@@ -1,13 +1,12 @@
 package com.phoenix.controllers;
 
 import com.phoenix.dto.*;
-import com.phoenix.model.App;
-import com.phoenix.model.AppDetails;
-import com.phoenix.model.Category;
+import com.phoenix.model.*;
 import com.phoenix.util.FileUploader;
 import com.phoenix.util.HibernateUtil;
 import jakarta.ws.rs.*;
 import jakarta.ws.rs.core.MediaType;
+import org.glassfish.jersey.media.multipart.FormDataBodyPart;
 import org.glassfish.jersey.media.multipart.FormDataContentDisposition;
 import org.glassfish.jersey.media.multipart.FormDataParam;
 import org.hibernate.Session;
@@ -105,6 +104,111 @@ public class AppController {
     }
 
     @POST
+    @Path("release")
+    @Consumes(MediaType.MULTIPART_FORM_DATA)
+    public Message release(@FormDataParam("appRelease") AppReleaseDto app,
+                          @FormDataParam("screenshots") List<FormDataBodyPart> ss,
+                           @FormDataParam("apk") InputStream apk,
+                           @FormDataParam("apk") FormDataContentDisposition apkContent,
+                           @FormDataParam("screenshots") List<FormDataContentDisposition> ssContent
+
+    ) throws Exception {
+
+        String packageName = app.getPackageName();
+
+
+        File mainLocation = new File("/PhoenixNest");
+        File appsFile = new File(mainLocation + "/apps");
+        File packageFile = new File(appsFile + "/" + packageName);
+
+        File releasesFile = new File(packageFile + "/releases");
+        File releaseVersionCodeFile=new File(releasesFile + "/"+app.getVersionCode());
+        File screenShotsFile = new File(releaseVersionCodeFile + "/screenshots");
+
+        if (!mainLocation.exists()) {
+            mainLocation.mkdir();
+        }
+
+        if (!appsFile.exists()) {
+            appsFile.mkdir();
+        }
+        if (!packageFile.exists()) {
+            packageFile.mkdir();
+        }
+        if (!releasesFile.exists()) {
+            releasesFile.mkdir();
+        }
+        if (!releaseVersionCodeFile.exists()) {
+            releaseVersionCodeFile.mkdir();
+        }
+        if (!screenShotsFile.exists()) {
+            screenShotsFile.mkdir();
+        }
+
+
+
+
+        AppReleases appReleases = new AppReleases();
+        appReleases.setVersion(app.getVersion());
+        appReleases.setVersionCode(app.getVersionCode());
+
+
+        File apkFile = new File(releaseVersionCodeFile + "/" + apkContent.getFileName());
+        List<Screenshot> screenShotsLoc = new LinkedList();
+
+
+
+
+
+
+        SessionFactory sf = HibernateUtil.getSessionFactory();
+        Session s = sf.openSession();
+
+        Query<AppReleases> apListQuery = s.createQuery("SELECT r FROM AppReleases r WHERE r.app.packageName=:pkg AND r.versionCode=:vc ");
+        apListQuery.setParameter("pkg", app.getPackageName());
+        apListQuery.setParameter("vc", app.getVersionCode());
+
+        List<AppReleases> l = apListQuery.getResultList();
+        String message = "Sucess";
+        if(l.size()==0){
+            App app1 = s.find(App.class, app.getPackageName());
+
+            String apkLocation = FileUploader.upload(apk, apkFile);
+            appReleases.setApk(apkLocation);
+            appReleases.setApp(app1);
+            appReleases.setScreenshots(screenShotsLoc);
+            app1.setAppReleasesList(appReleases);
+
+            for (FormDataBodyPart filePart : ss) {
+                InputStream fileInputStream = filePart.getValueAs(InputStream.class);
+                FormDataContentDisposition contentDispositionHeader = filePart.getFormDataContentDisposition();
+
+                File ssfile = new File(screenShotsFile + "/" + contentDispositionHeader.getFileName());
+                String ssLocName = FileUploader.upload(fileInputStream, ssfile);
+                Screenshot scs = new Screenshot();
+                scs.setScreenshot(ssLocName);
+                scs.setAppRelease(appReleases);
+                screenShotsLoc.add(scs);
+            }
+
+
+            Transaction ta = s.beginTransaction();
+
+            try {
+                s.persist(app1);
+                ta.commit();
+            } catch (Exception e) {
+                ta.rollback();
+                e.printStackTrace();
+                message = "error";
+            }
+        }else{
+            message="Sorry This Version Is already Released";
+        }
+        return new Message().setMessage(message);
+    }
+
+    @POST
     @Path("addAppDetails")
     @Consumes(MediaType.APPLICATION_JSON)
     public Message addAppDetails(AppDetailsDto appDetailsDto) {
@@ -141,6 +245,7 @@ public class AppController {
 
 
     }
+
     @POST
     @Path("updateAppDetails")
     @Consumes(MediaType.APPLICATION_JSON)

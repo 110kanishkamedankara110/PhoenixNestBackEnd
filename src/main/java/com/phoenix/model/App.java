@@ -4,6 +4,7 @@ import jakarta.persistence.*;
 import org.hibernate.annotations.Cascade;
 import org.hibernate.annotations.CascadeType;
 
+import java.util.LinkedList;
 import java.util.List;
 
 @Entity
@@ -16,7 +17,17 @@ public class App extends BaseModel {
     private String appIcon;
     private String appBanner;
 
+    @OneToMany(mappedBy = "app")
+    @Cascade(CascadeType.ALL)
+    private List<AppReleases> appReleasesList = new LinkedList();
 
+    public List<AppReleases> getAppReleasesList() {
+        return appReleasesList;
+    }
+
+    public void setAppReleasesList(AppReleases appReleasesList) {
+        this.appReleasesList.add(appReleasesList);
+    }
 
     private boolean isActive = false;
 
@@ -31,6 +42,7 @@ public class App extends BaseModel {
     @OneToOne(mappedBy = "app")
     @Cascade(CascadeType.ALL)
     private AppDetails appDetails;
+
     public boolean isActive() {
         return isActive;
     }

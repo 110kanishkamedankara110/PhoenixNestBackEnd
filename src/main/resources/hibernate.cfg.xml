@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8" ?>
-<hibernate-configuration >
+<hibernate-configuration>
     <session-factory>
         <property name="format_sql">true</property>
         <property name="hbm2ddl.auto">update</property>
@@ -10,11 +10,13 @@
         <property name="connection.password">0724886404Was</property>
         <property name="connection.url">jdbc:mysql://localhost:3306/phoenixNest?allowPublicKeyRetrieval=true&amp;useSSL=false</property>
 
-        <mapping class="com.phoenix.model.Category" />
+        <mapping class="com.phoenix.model.Category"/>
         <mapping class="com.phoenix.model.CategoryImage"/>
         <mapping class="com.phoenix.model.App"/>
         <mapping class="com.phoenix.model.AppDetails"/>
         <mapping class="com.phoenix.model.Screenshot"/>
+        <mapping class="com.phoenix.model.AppReleases"/>
+
 
     </session-factory>
 </hibernate-configuration>

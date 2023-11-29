@@ -37,4 +37,12 @@ public class ImageController {
         FileInputStream fd=new FileInputStream(f);
         return fd;
     }
+    @GET
+    @Path("screenShot/{packageName}/{versionCode}/{image}")
+    @Produces("application/octet-stream")
+    public InputStream getScreenShot(@PathParam("image") String image,@PathParam("packageName") String packageName,@PathParam("versionCode") String versionCode) throws Exception{
+        File f=new File("/PhoenixNest/apps/"+packageName+"/releases/"+versionCode+"/screenShots/"+image);
+        FileInputStream fd=new FileInputStream(f);
+        return fd;
+    }
 }
