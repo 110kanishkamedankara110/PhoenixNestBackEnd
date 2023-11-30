@@ -20,6 +20,8 @@ public class AppReleases extends BaseModel {
 
     private boolean approved=false;
 
+
+
     public boolean isApproved() {
         return approved;
     }

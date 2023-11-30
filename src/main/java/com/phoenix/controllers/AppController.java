@@ -4,8 +4,11 @@ import com.phoenix.dto.*;
 import com.phoenix.model.*;
 import com.phoenix.util.FileUploader;
 import com.phoenix.util.HibernateUtil;
+import com.phoenix.util.ReleasesComparator;
 import jakarta.ws.rs.*;
 import jakarta.ws.rs.core.MediaType;
+import jakarta.ws.rs.core.Response;
+import jakarta.ws.rs.core.StreamingOutput;
 import org.glassfish.jersey.media.multipart.FormDataBodyPart;
 import org.glassfish.jersey.media.multipart.FormDataContentDisposition;
 import org.glassfish.jersey.media.multipart.FormDataParam;
@@ -15,13 +18,14 @@ import org.hibernate.Transaction;
 import org.hibernate.query.Query;
 
 import javax.imageio.ImageIO;
-import java.awt.*;
 import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.InputStream;
+import java.util.Collections;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicReference;
 
 
 @Path("/api/app/")
@@ -107,7 +111,7 @@ public class AppController {
     @Path("release")
     @Consumes(MediaType.MULTIPART_FORM_DATA)
     public Message release(@FormDataParam("appRelease") AppReleaseDto app,
-                          @FormDataParam("screenshots") List<FormDataBodyPart> ss,
+                           @FormDataParam("screenshots") List<FormDataBodyPart> ss,
                            @FormDataParam("apk") InputStream apk,
                            @FormDataParam("apk") FormDataContentDisposition apkContent,
                            @FormDataParam("screenshots") List<FormDataContentDisposition> ssContent
@@ -122,7 +126,7 @@ public class AppController {
         File packageFile = new File(appsFile + "/" + packageName);
 
         File releasesFile = new File(packageFile + "/releases");
-        File releaseVersionCodeFile=new File(releasesFile + "/"+app.getVersionCode());
+        File releaseVersionCodeFile = new File(releasesFile + "/" + app.getVersionCode());
         File screenShotsFile = new File(releaseVersionCodeFile + "/screenshots");
 
         if (!mainLocation.exists()) {
@@ -146,8 +150,6 @@ public class AppController {
         }
 
 
-
-
         AppReleases appReleases = new AppReleases();
         appReleases.setVersion(app.getVersion());
         appReleases.setVersionCode(app.getVersionCode());
@@ -155,10 +157,6 @@ public class AppController {
 
         File apkFile = new File(releaseVersionCodeFile + "/" + apkContent.getFileName());
         List<Screenshot> screenShotsLoc = new LinkedList();
-
-
-
-
 
 
         SessionFactory sf = HibernateUtil.getSessionFactory();
@@ -170,11 +168,11 @@ public class AppController {
 
         List<AppReleases> l = apListQuery.getResultList();
         String message = "Sucess";
-        if(l.size()==0){
+        if (l.size() == 0) {
             App app1 = s.find(App.class, app.getPackageName());
 
             String apkLocation = FileUploader.upload(apk, apkFile);
-            appReleases.setApk(apkLocation);
+            appReleases.setApk(apkContent.getFileName());
             appReleases.setApp(app1);
             appReleases.setScreenshots(screenShotsLoc);
             app1.setAppReleasesList(appReleases);
@@ -186,7 +184,7 @@ public class AppController {
                 File ssfile = new File(screenShotsFile + "/" + contentDispositionHeader.getFileName());
                 String ssLocName = FileUploader.upload(fileInputStream, ssfile);
                 Screenshot scs = new Screenshot();
-                scs.setScreenshot(ssLocName);
+                scs.setScreenshot(contentDispositionHeader.getFileName());
                 scs.setAppRelease(appReleases);
                 screenShotsLoc.add(scs);
             }
@@ -202,8 +200,8 @@ public class AppController {
                 e.printStackTrace();
                 message = "error";
             }
-        }else{
-            message="Sorry This Version Is already Released";
+        } else {
+            message = "Sorry This Version Is already Released";
         }
         return new Message().setMessage(message);
     }
@@ -382,6 +380,181 @@ public class AppController {
 
         return appList;
     }
+
+    @GET
+    @Path("getAllApps")
+    @Produces(MediaType.APPLICATION_JSON)
+    public List<AppDto> getAllApps() {
+        SessionFactory sf = HibernateUtil.getSessionFactory();
+        Session s = sf.openSession();
+
+        Query<App> query = s.createQuery("SELECT a FROM App a WHERE a.isActive ORDER BY a.updated DESC  ", App.class);
+        List<App> apps = query.getResultList();
+        List<AppDto> appList = new LinkedList();
+        final AppReleases[] newRelease = new AppReleases[1];
+        apps.forEach(a -> {
+            AppDto appDto = new AppDto();
+
+            List<String> screenShots = new LinkedList();
+            if (a.getAppDetails() != null) {
+                appDto.setDescription(a.getAppDetails().getDescription());
+                List<String> categories = new LinkedList();
+                a.getAppDetails().getCategories().forEach(c -> {
+                    categories.add(c.getCategoryName());
+                });
+                List<AppReleases> releases = a.getAppReleasesList();
+
+                Collections.sort(releases, new ReleasesComparator());
+
+                for (AppReleases r : releases) {
+                    if (r.isApproved()) {
+                        newRelease[0] =r;
+                        break;
+                    }
+                }
+                appDto.setApk(newRelease[0].getApk());
+                appDto.setVersionCode(newRelease[0].getVersionCode());
+                appDto.setVersion(newRelease[0].getVersion());
+                newRelease[0].getScreenshots().forEach(ss -> {
+                    screenShots.add(ss.getScreenshot());
+                });
+                appDto.setScreenShots(screenShots);
+                appDto.setCategoryies(categories);
+            }
+
+
+            appDto.setAppIcon(a.getAppIcon());
+            appDto.setAppBanner(a.getAppBanner());
+            appDto.setAppTitle(a.getAppTitle());
+
+            appDto.setPackageName(a.getPackageName());
+            appDto.setMainActivity(a.getMainActivity());
+            try {
+                File f = new File("/PhoenixNest/apps/" + a.getPackageName() + "/appBanner/" + a.getAppBanner());
+                BufferedImage image = ImageIO.read(f);
+                int height = image.getHeight();
+                int width = image.getWidth();
+
+                appDto.setHeight(height);
+                appDto.setWidth(width);
+
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+            appList.add(appDto);
+        });
+
+        return appList;
+    }
+
+    @GET
+    @Path("getAllApps/{key}")
+    @Produces(MediaType.APPLICATION_JSON)
+    public List<AppDto> getAllAppsFilter(@PathParam("key") String key) {
+        SessionFactory sf = HibernateUtil.getSessionFactory();
+        Session s = sf.openSession();
+
+        Query<App> query = s.createQuery("SELECT a FROM App a WHERE (a.user=:user OR a.packageName=:pkgName) AND a.isActive ORDER BY a.updated DESC  ", App.class);
+        query.setParameter("user", key);
+        query.setParameter("pkgName", key);
+        List<App> apps = query.getResultList();
+        List<AppDto> appList = new LinkedList();
+        AtomicReference<AppReleases> newRelease=null;
+        apps.forEach(a -> {
+            AppDto appDto = new AppDto();
+
+            List<String> screenShots = new LinkedList();
+            if (a.getAppDetails() != null) {
+                appDto.setDescription(a.getAppDetails().getDescription());
+                List<String> categories = new LinkedList();
+                a.getAppDetails().getCategories().forEach(c -> {
+                    categories.add(c.getCategoryName());
+                });
+                List<AppReleases> releases = a.getAppReleasesList();
+
+                Collections.sort(releases, new ReleasesComparator());
+
+                for (AppReleases r : releases) {
+                    if (r.isApproved()) {
+                        newRelease.set(r);
+                        break;
+                    }
+                }
+                appDto.setApk(newRelease.get().getApk());
+                appDto.setVersionCode(newRelease.get().getVersionCode());
+                appDto.setVersion(newRelease.get().getVersion());
+                newRelease.get().getScreenshots().forEach(ss -> {
+                    screenShots.add(ss.getScreenshot());
+                });
+                appDto.setScreenShots(screenShots);
+                appDto.setCategoryies(categories);
+            }
+
+
+            appDto.setAppIcon(a.getAppIcon());
+            appDto.setAppBanner(a.getAppBanner());
+            appDto.setAppTitle(a.getAppTitle());
+
+            appDto.setPackageName(a.getPackageName());
+            appDto.setMainActivity(a.getMainActivity());
+            try {
+                File f = new File("/PhoenixNest/apps/" + a.getPackageName() + "/appBanner/" + a.getAppBanner());
+                BufferedImage image = ImageIO.read(f);
+                int height = image.getHeight();
+                int width = image.getWidth();
+
+                appDto.setHeight(height);
+                appDto.setWidth(width);
+
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+            appList.add(appDto);
+        });
+
+        return appList;
+    }
+
+    @GET
+    @Path("download/{packegeName}/{versionCode}/{apk}")
+    @Produces("application/vnd.android.package-archive")
+    public InputStream download(@PathParam("packegeName") String packegeName
+            ,@PathParam("versionCode") String versionCode
+            ,@PathParam("apk") String apk) throws Exception{
+
+        File f=new File("/PhoenixNest/apps/"+packegeName+"/releases/"+versionCode+"/"+apk);
+        FileInputStream fd=new FileInputStream(f);
+        return fd;
+    }
+//    public Response download(
+//            @PathParam("packegeName") String packageName,
+//            @PathParam("versionCode") String versionCode,
+//            @PathParam("apk") String apk) {
+//
+//        // Build the file path
+//        String filePath = "/PhoenixNest/apps/" + packageName + "/releases/" + versionCode + "/" + apk;
+//
+//        File file = new File(filePath);
+//
+//        if (!file.exists()) {
+//            return Response.status(Response.Status.NOT_FOUND).entity("File not found").build();
+//        }
+//
+//        StreamingOutput stream = output -> {
+//            try (InputStream fileInputStream = new FileInputStream(file)) {
+//                byte[] buffer = new byte[4096];
+//                int bytesRead;
+//                while ((bytesRead = fileInputStream.read(buffer)) != -1) {
+//                    output.write(buffer, 0, bytesRead);
+//                }
+//                output.flush();
+//            }
+//        };
+//
+//        return Response.ok(stream, MediaType.APPLICATION_OCTET_STREAM)
+//                .header("content-disposition", "attachment; filename=" + file.getName())
+//                .build();
+//    }
 
 
 }
