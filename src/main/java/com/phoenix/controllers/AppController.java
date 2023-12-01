@@ -22,6 +22,7 @@ import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.InputStream;
+import java.nio.file.Paths;
 import java.util.Collections;
 import java.util.LinkedList;
 import java.util.List;
@@ -517,44 +518,29 @@ public class AppController {
 
     @GET
     @Path("download/{packegeName}/{versionCode}/{apk}")
-    @Produces("application/vnd.android.package-archive")
-    public InputStream download(@PathParam("packegeName") String packegeName
-            ,@PathParam("versionCode") String versionCode
-            ,@PathParam("apk") String apk) throws Exception{
-
-        File f=new File("/PhoenixNest/apps/"+packegeName+"/releases/"+versionCode+"/"+apk);
-        FileInputStream fd=new FileInputStream(f);
-        return fd;
-    }
-//    public Response download(
-//            @PathParam("packegeName") String packageName,
-//            @PathParam("versionCode") String versionCode,
-//            @PathParam("apk") String apk) {
+//    @Produces("application/vnd.android.package-archive")
+//    public InputStream download(@PathParam("packegeName") String packegeName
+//            ,@PathParam("versionCode") String versionCode
+//            ,@PathParam("apk") String apk) throws Exception{
 //
-//        // Build the file path
-//        String filePath = "/PhoenixNest/apps/" + packageName + "/releases/" + versionCode + "/" + apk;
-//
-//        File file = new File(filePath);
-//
-//        if (!file.exists()) {
-//            return Response.status(Response.Status.NOT_FOUND).entity("File not found").build();
-//        }
-//
-//        StreamingOutput stream = output -> {
-//            try (InputStream fileInputStream = new FileInputStream(file)) {
-//                byte[] buffer = new byte[4096];
-//                int bytesRead;
-//                while ((bytesRead = fileInputStream.read(buffer)) != -1) {
-//                    output.write(buffer, 0, bytesRead);
-//                }
-//                output.flush();
-//            }
-//        };
-//
-//        return Response.ok(stream, MediaType.APPLICATION_OCTET_STREAM)
-//                .header("content-disposition", "attachment; filename=" + file.getName())
-//                .build();
+//        File f=new File("/PhoenixNest/apps/"+packegeName+"/releases/"+versionCode+"/"+apk);
+//        FileInputStream fd=new FileInputStream(f);
+//        return fd;
 //    }
+    public Response download(
+            @PathParam("packegeName") String packageName,
+            @PathParam("versionCode") String versionCode,
+            @PathParam("apk") String apk) {
+
+        // Build the file path
+        String filePath = "/PhoenixNest/apps/" + packageName + "/releases/" + versionCode + "/" + apk;
+        java.nio.file.Path path= Paths.get(filePath);
+        Response.ResponseBuilder resp=Response.ok(path.toFile());
+        resp.header("Content-Disposition","attachment; filename="+path.getFileName());
+        resp.header("Content-Length",String.valueOf(path.toFile().length()));
+        return resp.build();
+
+    }
 
 
 }
