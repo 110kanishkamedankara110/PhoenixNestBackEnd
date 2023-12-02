@@ -2,6 +2,7 @@ package com.phoenix.controllers;
 
 import com.phoenix.dto.*;
 import com.phoenix.model.*;
+import com.phoenix.util.Colors;
 import com.phoenix.util.FileUploader;
 import com.phoenix.util.HibernateUtil;
 import com.phoenix.util.ReleasesComparator;
@@ -23,9 +24,7 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.InputStream;
 import java.nio.file.Paths;
-import java.util.Collections;
-import java.util.LinkedList;
-import java.util.List;
+import java.util.*;
 import java.util.concurrent.atomic.AtomicReference;
 
 
@@ -214,15 +213,17 @@ public class AppController {
         SessionFactory sf = HibernateUtil.getSessionFactory();
         Session s = sf.openSession();
         App a = s.find(App.class, appDetailsDto.getPackageName());
+        AppDetails appDetails = new AppDetails();
         List<Category> categories = new LinkedList();
         appDetailsDto.getCategories().forEach(c -> {
             Query<Category> q = s.createQuery("SELECT c FROM Category c WHERE c.categoryName=:category");
             q.setParameter("category", c);
             Category category = q.getSingleResult();
+            category.setAppDetails(appDetails);
             categories.add(category);
         });
 
-        AppDetails appDetails = new AppDetails();
+
         appDetails.setCategories(categories);
         appDetails.setDescription(appDetailsDto.getDescription());
         appDetails.setApp(a);
@@ -253,14 +254,18 @@ public class AppController {
         Session s = sf.openSession();
         App a = s.find(App.class, appDetailsDto.getPackageName());
         List<Category> categories = new LinkedList();
+        AppDetails appDetails = a.getAppDetails();
         appDetailsDto.getCategories().forEach(c -> {
             Query<Category> q = s.createQuery("SELECT c FROM Category c WHERE c.categoryName=:category");
             q.setParameter("category", c);
+
             Category category = q.getSingleResult();
+            category.setAppDetails(appDetails);
+
             categories.add(category);
         });
 
-        AppDetails appDetails = a.getAppDetails();
+
         appDetails.setCategories(categories);
         appDetails.setDescription(appDetailsDto.getDescription());
 
@@ -409,7 +414,7 @@ public class AppController {
 
                 for (AppReleases r : releases) {
                     if (r.isApproved()) {
-                        newRelease[0] =r;
+                        newRelease[0] = r;
                         break;
                     }
                 }
@@ -432,6 +437,11 @@ public class AppController {
             appDto.setMainActivity(a.getMainActivity());
             try {
                 File f = new File("/PhoenixNest/apps/" + a.getPackageName() + "/appBanner/" + a.getAppBanner());
+
+
+                appDto.setMaxColor(Colors.getMax(f));
+                appDto.setMinColor(Colors.getMin(f));
+
                 BufferedImage image = ImageIO.read(f);
                 int height = image.getHeight();
                 int width = image.getWidth();
@@ -455,12 +465,14 @@ public class AppController {
         SessionFactory sf = HibernateUtil.getSessionFactory();
         Session s = sf.openSession();
 
-        Query<App> query = s.createQuery("SELECT a FROM App a WHERE (a.user=:user OR a.packageName=:pkgName) AND a.isActive ORDER BY a.updated DESC  ", App.class);
+        Query<App> query = s.createQuery("SELECT a FROM App a WHERE (a.user=:user OR a.packageName=:pkgName OR a.appTitle LIKE :title) AND a.isActive ORDER BY a.updated DESC  ", App.class);
         query.setParameter("user", key);
         query.setParameter("pkgName", key);
+        query.setParameter("title", "%"+key+"%");
+
         List<App> apps = query.getResultList();
         List<AppDto> appList = new LinkedList();
-        AtomicReference<AppReleases> newRelease=null;
+        final AppReleases[] newRelease = new AppReleases[1];
         apps.forEach(a -> {
             AppDto appDto = new AppDto();
 
@@ -477,14 +489,14 @@ public class AppController {
 
                 for (AppReleases r : releases) {
                     if (r.isApproved()) {
-                        newRelease.set(r);
+                        newRelease[0] = r;
                         break;
                     }
                 }
-                appDto.setApk(newRelease.get().getApk());
-                appDto.setVersionCode(newRelease.get().getVersionCode());
-                appDto.setVersion(newRelease.get().getVersion());
-                newRelease.get().getScreenshots().forEach(ss -> {
+                appDto.setApk(newRelease[0].getApk());
+                appDto.setVersionCode(newRelease[0].getVersionCode());
+                appDto.setVersion(newRelease[0].getVersion());
+                newRelease[0].getScreenshots().forEach(ss -> {
                     screenShots.add(ss.getScreenshot());
                 });
                 appDto.setScreenShots(screenShots);
@@ -500,6 +512,11 @@ public class AppController {
             appDto.setMainActivity(a.getMainActivity());
             try {
                 File f = new File("/PhoenixNest/apps/" + a.getPackageName() + "/appBanner/" + a.getAppBanner());
+
+
+                appDto.setMaxColor(Colors.getMax(f));
+                appDto.setMinColor(Colors.getMin(f));
+
                 BufferedImage image = ImageIO.read(f);
                 int height = image.getHeight();
                 int width = image.getWidth();
@@ -518,15 +535,7 @@ public class AppController {
 
     @GET
     @Path("download/{packegeName}/{versionCode}/{apk}")
-//    @Produces("application/vnd.android.package-archive")
-//    public InputStream download(@PathParam("packegeName") String packegeName
-//            ,@PathParam("versionCode") String versionCode
-//            ,@PathParam("apk") String apk) throws Exception{
-//
-//        File f=new File("/PhoenixNest/apps/"+packegeName+"/releases/"+versionCode+"/"+apk);
-//        FileInputStream fd=new FileInputStream(f);
-//        return fd;
-//    }
+
     public Response download(
             @PathParam("packegeName") String packageName,
             @PathParam("versionCode") String versionCode,
@@ -534,10 +543,10 @@ public class AppController {
 
         // Build the file path
         String filePath = "/PhoenixNest/apps/" + packageName + "/releases/" + versionCode + "/" + apk;
-        java.nio.file.Path path= Paths.get(filePath);
-        Response.ResponseBuilder resp=Response.ok(path.toFile());
-        resp.header("Content-Disposition","attachment; filename="+path.getFileName());
-        resp.header("Content-Length",String.valueOf(path.toFile().length()));
+        java.nio.file.Path path = Paths.get(filePath);
+        Response.ResponseBuilder resp = Response.ok(path.toFile());
+        resp.header("Content-Disposition", "attachment; filename=" + path.getFileName());
+        resp.header("Content-Length", String.valueOf(path.toFile().length()));
         return resp.build();
 
     }

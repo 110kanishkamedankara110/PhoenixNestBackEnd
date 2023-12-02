@@ -6,6 +6,15 @@ public class CategoryDto {
     private int id;
     private String category;
     private List<String> images;
+    private Integer appCount;
+
+    public Integer getAppCount() {
+        return appCount;
+    }
+
+    public void setAppCount(Integer appCount) {
+        this.appCount = appCount;
+    }
 
     public int getId() {
         return id;
