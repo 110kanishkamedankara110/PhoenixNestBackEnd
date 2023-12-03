@@ -121,7 +121,7 @@ public class CategoryController {
             appDto.setAppIcon(a.getAppIcon());
             appDto.setAppBanner(a.getAppBanner());
             appDto.setAppTitle(a.getAppTitle());
-
+            appDto.setDownloads(a.getDownloads());
             appDto.setPackageName(a.getPackageName());
             appDto.setMainActivity(a.getMainActivity());
             try {

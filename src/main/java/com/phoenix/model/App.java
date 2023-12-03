@@ -12,6 +12,25 @@ public class App extends BaseModel {
     @Id
     private String packageName;
     private String user;
+
+    private int downloads;
+
+    public int getDownloads() {
+        return downloads;
+    }
+
+    public void addDownloads() {
+        this.downloads++;
+    }
+
+    public void setDownloads(int downloads) {
+        this.downloads = downloads;
+    }
+
+    public void setAppReleasesList(List<AppReleases> appReleasesList) {
+        this.appReleasesList = appReleasesList;
+    }
+
     private String appTitle;
     private String mainActivity;
     private String appIcon;

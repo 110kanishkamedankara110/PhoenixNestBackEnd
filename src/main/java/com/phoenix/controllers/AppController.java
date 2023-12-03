@@ -9,7 +9,6 @@ import com.phoenix.util.ReleasesComparator;
 import jakarta.ws.rs.*;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
-import jakarta.ws.rs.core.StreamingOutput;
 import org.glassfish.jersey.media.multipart.FormDataBodyPart;
 import org.glassfish.jersey.media.multipart.FormDataContentDisposition;
 import org.glassfish.jersey.media.multipart.FormDataParam;
@@ -326,7 +325,7 @@ public class AppController {
             appDto.setAppIcon(a.getAppIcon());
             appDto.setAppBanner(a.getAppBanner());
             appDto.setAppTitle(a.getAppTitle());
-
+            appDto.setDownloads(a.getDownloads());
             appDto.setPackageName(a.getPackageName());
             appDto.setMainActivity(a.getMainActivity());
 
@@ -366,7 +365,7 @@ public class AppController {
             appDto.setAppIcon(a.getAppIcon());
             appDto.setAppBanner(a.getAppBanner());
             appDto.setAppTitle(a.getAppTitle());
-
+            appDto.setDownloads(a.getDownloads());
             appDto.setPackageName(a.getPackageName());
             appDto.setMainActivity(a.getMainActivity());
             try {
@@ -432,7 +431,7 @@ public class AppController {
             appDto.setAppIcon(a.getAppIcon());
             appDto.setAppBanner(a.getAppBanner());
             appDto.setAppTitle(a.getAppTitle());
-
+            appDto.setDownloads(a.getDownloads());
             appDto.setPackageName(a.getPackageName());
             appDto.setMainActivity(a.getMainActivity());
             try {
@@ -468,7 +467,7 @@ public class AppController {
         Query<App> query = s.createQuery("SELECT a FROM App a WHERE (a.user=:user OR a.packageName=:pkgName OR a.appTitle LIKE :title) AND a.isActive ORDER BY a.updated DESC  ", App.class);
         query.setParameter("user", key);
         query.setParameter("pkgName", key);
-        query.setParameter("title", "%"+key+"%");
+        query.setParameter("title", "%" + key + "%");
 
         List<App> apps = query.getResultList();
         List<AppDto> appList = new LinkedList();
@@ -507,7 +506,7 @@ public class AppController {
             appDto.setAppIcon(a.getAppIcon());
             appDto.setAppBanner(a.getAppBanner());
             appDto.setAppTitle(a.getAppTitle());
-
+            appDto.setDownloads(a.getDownloads());
             appDto.setPackageName(a.getPackageName());
             appDto.setMainActivity(a.getMainActivity());
             try {
@@ -541,7 +540,23 @@ public class AppController {
             @PathParam("versionCode") String versionCode,
             @PathParam("apk") String apk) {
 
-        // Build the file path
+        SessionFactory sf = HibernateUtil.getSessionFactory();
+        Session s = sf.openSession();
+
+        Query<App> query = s.createQuery("SELECT a FROM App a WHERE a.packageName=:pkgName", App.class);
+        query.setParameter("pkgName", packageName);
+
+        App a = query.getSingleResult();
+        a.addDownloads();
+        Transaction ta = s.beginTransaction();
+        try {
+            s.merge(a);
+            ta.commit();
+        } catch (Exception e) {
+            ta.rollback();
+            e.printStackTrace();
+        }
+
         String filePath = "/PhoenixNest/apps/" + packageName + "/releases/" + versionCode + "/" + apk;
         java.nio.file.Path path = Paths.get(filePath);
         Response.ResponseBuilder resp = Response.ok(path.toFile());
@@ -551,5 +566,79 @@ public class AppController {
 
     }
 
+
+
+    @GET
+    @Path("getPopular")
+    @Produces(MediaType.APPLICATION_JSON)
+    public List<AppDto> getPopular() {
+        SessionFactory sf = HibernateUtil.getSessionFactory();
+        Session s = sf.openSession();
+
+        Query<App> query = s.createQuery("SELECT a FROM App a WHERE a.isActive ORDER BY a.downloads DESC", App.class);
+        query.setMaxResults(5);
+
+        List<App> apps = query.getResultList();
+        List<AppDto> appList = new LinkedList();
+        final AppReleases[] newRelease = new AppReleases[1];
+        apps.forEach(a -> {
+            AppDto appDto = new AppDto();
+
+            List<String> screenShots = new LinkedList();
+            if (a.getAppDetails() != null) {
+                appDto.setDescription(a.getAppDetails().getDescription());
+                List<String> categories = new LinkedList();
+                a.getAppDetails().getCategories().forEach(c -> {
+                    categories.add(c.getCategoryName());
+                });
+                List<AppReleases> releases = a.getAppReleasesList();
+
+                Collections.sort(releases, new ReleasesComparator());
+
+                for (AppReleases r : releases) {
+                    if (r.isApproved()) {
+                        newRelease[0] = r;
+                        break;
+                    }
+                }
+                appDto.setApk(newRelease[0].getApk());
+                appDto.setVersionCode(newRelease[0].getVersionCode());
+                appDto.setVersion(newRelease[0].getVersion());
+                newRelease[0].getScreenshots().forEach(ss -> {
+                    screenShots.add(ss.getScreenshot());
+                });
+                appDto.setScreenShots(screenShots);
+                appDto.setCategoryies(categories);
+            }
+
+
+            appDto.setAppIcon(a.getAppIcon());
+            appDto.setAppBanner(a.getAppBanner());
+            appDto.setAppTitle(a.getAppTitle());
+            appDto.setDownloads(a.getDownloads());
+            appDto.setPackageName(a.getPackageName());
+            appDto.setMainActivity(a.getMainActivity());
+            try {
+                File f = new File("/PhoenixNest/apps/" + a.getPackageName() + "/appBanner/" + a.getAppBanner());
+
+
+                appDto.setMaxColor(Colors.getMax(f));
+                appDto.setMinColor(Colors.getMin(f));
+
+                BufferedImage image = ImageIO.read(f);
+                int height = image.getHeight();
+                int width = image.getWidth();
+
+                appDto.setHeight(height);
+                appDto.setWidth(width);
+
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+            appList.add(appDto);
+        });
+
+        return appList;
+    }
 
 }

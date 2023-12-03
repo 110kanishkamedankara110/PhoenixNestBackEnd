@@ -1,5 +1,6 @@
 package com.phoenix.dto;
 
+import com.phoenix.model.App;
 import com.phoenix.model.Screenshot;
 
 import java.util.List;
@@ -11,6 +12,16 @@ public class AppDto {
     private String mainActivity;
     private String description;
     private List<String> categoryies;
+    private int downloads;
+
+    public int getDownloads() {
+        return downloads;
+    }
+
+    public void setDownloads(int downloads) {
+        this.downloads = downloads;
+    }
+
     private String  maxColor;
     private String  minColor;
 
