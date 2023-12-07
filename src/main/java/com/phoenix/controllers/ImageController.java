@@ -21,14 +21,7 @@ public class ImageController {
         FileInputStream fd=new FileInputStream(f);
         return fd;
     }
-    @GET
-    @Path("appIcon/{packageName}/{image}")
-    @Produces("application/octet-stream")
-    public InputStream getappImage(@PathParam("image") String image,@PathParam("packageName") String packageName) throws Exception{
-        File f=new File("/PhoenixNest/apps/"+packageName+"/appIcon/"+image);
-        FileInputStream fd=new FileInputStream(f);
-        return fd;
-    }
+
     @GET
     @Path("appBanner/{packageName}/{image}")
     @Produces("application/octet-stream")
@@ -37,6 +30,17 @@ public class ImageController {
         FileInputStream fd=new FileInputStream(f);
         return fd;
     }
+
+
+    @GET
+    @Path("appIcon/{packageName}/{image}")
+    @Produces("application/octet-stream")
+    public InputStream getappImage(@PathParam("image") String image,@PathParam("packageName") String packageName) throws Exception{
+        File f=new File("/PhoenixNest/apps/"+packageName+"/appIcon/"+image);
+        FileInputStream fd=new FileInputStream(f);
+        return fd;
+    }
+
     @GET
     @Path("screenShot/{packageName}/{versionCode}/{image}")
     @Produces("application/octet-stream")
