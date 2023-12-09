@@ -19,6 +19,7 @@ public class ImageController {
     public InputStream getImage(@PathParam("image") String image) throws Exception{
         File f=new File("/PhoenixNest/category/"+image);
         FileInputStream fd=new FileInputStream(f);
+
         return fd;
     }
 

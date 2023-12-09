@@ -16,7 +16,7 @@
         <mapping class="com.phoenix.model.AppDetails"/>
         <mapping class="com.phoenix.model.Screenshot"/>
         <mapping class="com.phoenix.model.AppReleases"/>
-
+        <mapping class="com.phoenix.model.Admin"/>
 
     </session-factory>
 </hibernate-configuration>

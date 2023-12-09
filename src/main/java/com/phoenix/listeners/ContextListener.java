@@ -20,9 +20,8 @@ public class ContextListener implements ServletContextListener {
     public void contextInitialized(ServletContextEvent sce) {
 
         Env.setProperty("application.context",sce.getServletContext().getRealPath(""));
-        System.out.println(Env.get("application.context"));
-
-        ServletContextListener.super.contextInitialized(sce);
+        Env.setProperty("application.contextPath",sce.getServletContext().getContextPath());
+        System.out.println("contextPath = "+sce.getServletContext().getContextPath());
 
         SessionFactory sf = HibernateUtil.getSessionFactory();
         Session s = sf.openSession();

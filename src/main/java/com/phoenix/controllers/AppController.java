@@ -1,12 +1,13 @@
 package com.phoenix.controllers;
 
+import com.phoenix.annotations.Auth;
 import com.phoenix.dto.*;
+import com.phoenix.listeners.ContextListener;
 import com.phoenix.model.*;
-import com.phoenix.util.Colors;
-import com.phoenix.util.FileUploader;
-import com.phoenix.util.HibernateUtil;
-import com.phoenix.util.ReleasesComparator;
+import com.phoenix.util.*;
 import jakarta.ws.rs.*;
+import jakarta.ws.rs.client.Client;
+import jakarta.ws.rs.client.ClientBuilder;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 import org.glassfish.jersey.media.multipart.FormDataBodyPart;
@@ -101,7 +102,7 @@ public class AppController {
         } else {
             message = "This App Already Exists";
         }
-
+        s.close();
 
         return new Message().setMessage(message);
     }
@@ -202,6 +203,7 @@ public class AppController {
         } else {
             message = "Sorry This Version Is already Released";
         }
+        s.close();
         return new Message().setMessage(message);
     }
 
@@ -233,11 +235,12 @@ public class AppController {
         try {
             s.merge(a);
             ta.commit();
-
+            s.close();
             return new Message().setMessage("Success");
 
         } catch (Exception e) {
             ta.rollback();
+            s.close();
             return new Message().setMessage("Error");
 
         }
@@ -273,11 +276,12 @@ public class AppController {
         try {
             s.merge(a);
             ta.commit();
-
+            s.close();
             return new Message().setMessage("Success");
 
         } catch (Exception e) {
             ta.rollback();
+            s.close();
             return new Message().setMessage("Error");
 
         }
@@ -288,6 +292,7 @@ public class AppController {
     @GET
     @Path("getApps")
     @Produces(MediaType.APPLICATION_JSON)
+    @Auth
     public List<AppDto> getApps() {
         SessionFactory sf = HibernateUtil.getSessionFactory();
         Session s = sf.openSession();
@@ -302,6 +307,23 @@ public class AppController {
 
             if (a.getAppDetails() != null) {
                 appDto.setDescription(a.getAppDetails().getDescription());
+                appDto.setActive(a.isActive());
+
+
+                List<AppReleaseDto> rel = new LinkedList();
+
+                a.getAppDetails().getApp().getAppReleasesList().forEach(e -> {
+
+                    AppReleaseDto ad = new AppReleaseDto();
+                    ad.setApproved(e.isApproved());
+                    ad.setVersion(e.getVersion());
+                    ad.setVersionCode(e.getVersionCode());
+                    ad.setApk(e.getApk());
+                    rel.add(ad);
+                });
+
+
+                appDto.setAppReleaseDtoList(rel);
                 List<String> categories = new LinkedList();
                 a.getAppDetails().getCategories().forEach(c -> {
                     categories.add(c.getCategoryName());
@@ -331,7 +353,7 @@ public class AppController {
 
             appList.add(appDto);
         });
-
+        s.close();
         return appList;
     }
 
@@ -382,7 +404,7 @@ public class AppController {
             }
             appList.add(appDto);
         });
-
+        s.close();
         return appList;
     }
 
@@ -402,6 +424,8 @@ public class AppController {
 
             List<String> screenShots = new LinkedList();
             if (a.getAppDetails() != null) {
+
+
                 appDto.setDescription(a.getAppDetails().getDescription());
                 List<String> categories = new LinkedList();
                 a.getAppDetails().getCategories().forEach(c -> {
@@ -453,7 +477,7 @@ public class AppController {
             }
             appList.add(appDto);
         });
-
+        s.close();
         return appList;
     }
 
@@ -528,7 +552,7 @@ public class AppController {
             }
             appList.add(appDto);
         });
-
+        s.close();
         return appList;
     }
 
@@ -562,10 +586,10 @@ public class AppController {
         Response.ResponseBuilder resp = Response.ok(path.toFile());
         resp.header("Content-Disposition", "attachment; filename=" + path.getFileName());
         resp.header("Content-Length", String.valueOf(path.toFile().length()));
+        s.close();
         return resp.build();
 
     }
-
 
 
     @GET
@@ -637,8 +661,47 @@ public class AppController {
             }
             appList.add(appDto);
         });
-
+        s.close();
         return appList;
+    }
+
+    @POST
+    @Auth
+    @Path("approveRelease/{packageName}/{version}/{versionCode}")
+    public Message approve(@PathParam("packageName") String packageName, @PathParam("version") String version, @PathParam("versionCode") String versionCode) {
+        SessionFactory sf = HibernateUtil.getSessionFactory();
+        Session s = sf.openSession();
+
+        Query<App> query = s.createQuery("SELECT a FROM App a WHERE  a.packageName=:pkgName ORDER BY a.updated DESC  ", App.class);
+        query.setParameter("pkgName", packageName);
+        App app = query.getSingleResult();
+        app.setActive(true);
+
+        List<AppReleases> appReleases = app.getAppReleasesList();
+
+        for (AppReleases re : appReleases) {
+            System.out.println(re.getVersionCode());
+            System.out.println(versionCode);
+            System.out.println(versionCode.equals(re.getVersionCode()));
+            if (re.getVersionCode().equals(versionCode)) {
+                System.out.println("yes.................");
+                re.setApproved(true);
+                System.out.println(re.getVersion());
+                break;
+            }
+        }
+        Transaction ta = s.beginTransaction();
+        try {
+
+            s.merge(app);
+            ta.commit();
+        } catch (Exception e) {
+            ta.rollback();
+            e.printStackTrace();
+        }
+        Message m = new Message();
+        m.setMessage("Success");
+        return m;
     }
 
 }

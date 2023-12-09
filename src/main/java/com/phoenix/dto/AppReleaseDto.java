@@ -7,6 +7,26 @@ public class AppReleaseDto {
     private String packageName;
     private String version;
     private String versionCode;
+    private boolean approved;
+
+    private String apk;
+
+
+    public String getApk() {
+        return apk;
+    }
+
+    public void setApk(String apk) {
+        this.apk = apk;
+    }
+
+    public boolean isApproved() {
+        return approved;
+    }
+
+    public void setApproved(boolean approved) {
+        this.approved = approved;
+    }
 
     public String getPackageName() {
         return packageName;

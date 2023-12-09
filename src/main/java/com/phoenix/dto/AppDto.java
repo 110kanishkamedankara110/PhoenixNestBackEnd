@@ -9,10 +9,30 @@ import java.util.Map;
 public class AppDto {
     private String packageName;
     private String appTitle;
+    private boolean isActive;
+
+
+    private List<AppReleaseDto> appReleaseDtoList;
     private String mainActivity;
     private String description;
     private List<String> categoryies;
     private int downloads;
+
+    public boolean isActive() {
+        return isActive;
+    }
+
+    public void setActive(boolean active) {
+        isActive = active;
+    }
+
+    public List<AppReleaseDto> getAppReleaseDtoList() {
+        return appReleaseDtoList;
+    }
+
+    public void setAppReleaseDtoList(List<AppReleaseDto> appReleaseDtoList) {
+        this.appReleaseDtoList = appReleaseDtoList;
+    }
 
     public int getDownloads() {
         return downloads;

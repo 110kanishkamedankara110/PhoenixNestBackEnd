@@ -60,7 +60,7 @@ public class CategoryController {
             categoryList.add(categoryDto);
         });
 
-
+        s.close();
         return categoryList;
     }
 
@@ -143,7 +143,7 @@ public class CategoryController {
             }
             appList.add(appDto);
         });
-
+        s.close();
         return appList;
 
     }
